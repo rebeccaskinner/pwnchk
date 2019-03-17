@@ -8,7 +8,7 @@ data PwnChkException = InvalidStatusException Int
 
 instance Exception PwnChkException
 
-eitherToException :: (MonadThrow m) => (a -> PwnChkException) -> Either a b -> m b
+eitherToException :: (MonadThrow m, Exception e) => (a -> e) -> Either a b -> m b
 eitherToException f =
   \case
     Left e -> throwM $ f e
