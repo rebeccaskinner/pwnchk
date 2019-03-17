@@ -1,0 +1,93 @@
+name:                pwnchk
+version:             0.1.0.0
+github:              "rebeccaskinner/pwnchk"
+license:             BSD3
+author:              "Rebecca Skinner"
+maintainer:          "rebecca@rebeccaskinner.net"
+copyright:           "Copyright (c) 2017 Rebecca Skinner; All Rights Reserved"
+
+extra-source-files:
+- README.md
+- ChangeLog.md
+
+# Metadata used when publishing your package
+# synopsis:            Short description of your package
+# category:            applications
+
+# To avoid duplicated efforts in documentation and dealing with the
+# complications of embedding Haddock markup inside cabal files, it is
+# common to point users to the README.md file.
+description:         Please see the README on GitHub at <https://github.com/rebeccaskinner/pwnchk#readme>
+
+dependencies:
+- base >= 4.7 && < 5
+- bytestring
+- text
+- containers
+- mtl
+- http-client
+- http-client-tls
+- http-types
+- aeson
+- exceptions
+- time
+- iso8601-time
+
+library:
+  source-dirs: src
+  default-extensions:
+    - GADTs
+    - OverloadedStrings
+    - LambdaCase
+    - RankNTypes
+    - FlexibleContexts
+    - FlexibleInstances
+    - ScopedTypeVariables
+    - TypeApplications
+    - TypeFamilies
+    - BangPatterns
+    - ExistentialQuantification
+    - FunctionalDependencies
+    - MultiParamTypeClasses
+    - DeriveFunctor
+    - GeneralizedNewtypeDeriving
+    - DeriveGeneric
+
+executables:
+  pwnchk:
+    main:                Main.hs
+    source-dirs:         app
+    ghc-options:
+    - -threaded
+    - -rtsopts
+    - -with-rtsopts=-N
+    dependencies:
+    - pwnchk
+    default-extensions:
+    - GADTs
+    - OverloadedStrings
+    - LambdaCase
+    - RankNTypes
+    - FlexibleContexts
+    - FlexibleInstances
+    - ScopedTypeVariables
+    - TypeApplications
+    - TypeFamilies
+    - BangPatterns
+    - ExistentialQuantification
+    - FunctionalDependencies
+    - MultiParamTypeClasses
+    - DeriveFunctor
+    - GeneralizedNewtypeDeriving
+    - DeriveGeneric
+
+tests:
+  pwnchk-test:
+    main:                Spec.hs
+    source-dirs:         test
+    ghc-options:
+    - -threaded
+    - -rtsopts
+    - -with-rtsopts=-N
+    dependencies:
+    - pwnchk
