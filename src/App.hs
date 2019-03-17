@@ -1,3 +1,4 @@
+{-# LANGUAGE UndecidableInstances #-}
 {-# LANGUAGE TupleSections #-}
 module App where
 
@@ -8,6 +9,7 @@ import Control.Monad.Reader
 import Control.Monad.Except
 import Control.Monad.IO.Class
 import Data.List
+import Data.Char
 import qualified Data.Map.Strict as Map
 
 data Arg = Option String | Flag deriving (Eq, Show)
@@ -31,6 +33,36 @@ argMap args =
     splitOn' wCarry carry c (s:esses)
       | c == s = splitOn' "" (wCarry : carry) c esses
       | otherwise = splitOn' (s:wCarry) carry c esses
+
+class FromArg a where
+  fromArg :: String -> Either AppException a
+
+getOpt :: FromArg a => String -> ArgMap -> Either AppException a
+getOpt k m =
+  case Map.lookup k m of
+    Nothing -> Left $ ArgumentException $ "expected an argument: " ++ k
+    Just (Option a) -> fromArg a
+    Just Flag -> Left $ ArgumentException $ "expected an argument but got a flag: " ++ k
+
+getFlag :: String -> ArgMap -> Either AppException Bool
+getFlag k m =
+  case Map.lookup k m of
+    Nothing -> Left $ ArgumentException $ "expected a flag: " ++ k
+    Just Flag -> Right True
+    Just _ -> Left $ ArgumentException $ "expected a flag but got an argument: " ++ k
+
+instance {-# OVERLAPS #-} FromArg String where fromArg = Right
+instance {-# OVERLAPS #-} FromArg Bool where
+  fromArg s =
+    case map toLower s of
+      "true" -> Right True
+      "false" -> Right False
+      invalid -> Left $ ArgumentException $ "Non-truthy value: " ++ invalid
+instance {-# OVERLAPPABLE #-} Read r => FromArg r where
+  fromArg s = case read s of
+    Left err -> Left $ ArgumentException err
+    Right a -> Right a
+
 
 data AppException = RequestException PwnChkException
                   | ArgumentException String
@@ -73,14 +105,23 @@ getConfig = do
     throwM $ ArgumentException "missing argument"
   case args of
     ("help":_) -> return $ HelpCfg
-    ("account":args) -> cfgAccount args
-    ("password":args) -> cfgPassword args
+    ("account":args) -> checkForHelp args cfgAccount
+    ("password":args) -> checkForHelp args cfgPassword
     (unknown:_) -> throwM . ArgumentException $ "unknown mode: " ++ unknown
 
-cfgAccount :: [String] -> IO AppCfg
-cfgAccount args = do
-  args' <- eitherToException $ argMap args
+checkForHelp :: [String] -> (ArgMap -> IO AppCfg) -> IO AppCfg
+checkForHelp args f =
+  if any (== "--help") args
+  then return HelpCfg
+  else (eitherToException id $ argMap args) >>= f
 
+cfgAccount :: ArgMap -> IO AppCfg
+cfgAccount args =
+  eitherToException id $ AccountCfg
+  <$> "--acount" `getOpt` args
+  <*> "--verbose" `getFlag` args
 
-cfgPassword :: [String] -> IO AppCfg
-cfgPassword args = undefined
+cfgPassword :: ArgMap -> IO AppCfg
+cfgPassword args = do
+  when (Map.size args) > 1 $
+    throwM "Error, password only accepts 0 or 1 arguments"
