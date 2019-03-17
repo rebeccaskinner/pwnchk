@@ -32,6 +32,7 @@ dependencies:
 - exceptions
 - time
 - iso8601-time
+- cryptohash-sha1
 
 library:
   source-dirs: src

@@ -10,6 +10,12 @@ import Control.Monad.Except
 import Control.Monad.IO.Class
 import Data.List
 import Data.Char
+import Data.Maybe
+import System.IO
+import Crypto.Hash.SHA1
+import Numeric
+import qualified Data.ByteString.Char8 as BC
+import qualified Data.ByteString as BS
 import qualified Data.Map.Strict as Map
 
 data Arg = Option String | Flag deriving (Eq, Show)
@@ -17,14 +23,14 @@ type ArgMap = Map.Map String Arg
 
 argMap :: [String] -> Either AppException ArgMap
 argMap args =
-  Map.fromList <$> mapM (\arg -> (arg, ) <$> mkArg arg) args
+  Map.fromList <$> mapM (\arg -> mkArg arg) args
   where
-    mkArg :: String -> Either AppException Arg
+    mkArg :: String -> Either AppException (String, Arg)
     mkArg arg =
       case splitOn '=' arg of
         [] -> Left $ ArgumentException "missing argument"
-        [flag] -> Right $ Flag
-        [opt,val] -> Right $ Option val
+        [flag] -> Right $ (flag, Flag)
+        [opt,val] -> Right $ (opt, Option val)
         invalid -> Left $ ArgumentException ("invalid option: " ++ arg)
     splitOn :: Char -> String -> [String]
     splitOn c s = reverse . map reverse $ splitOn' "" [] c s
@@ -40,14 +46,14 @@ class FromArg a where
 getOpt :: FromArg a => String -> ArgMap -> Either AppException a
 getOpt k m =
   case Map.lookup k m of
-    Nothing -> Left $ ArgumentException $ "expected an argument: " ++ k
+    Nothing -> Left $ ArgumentException $ "expected an argument: " ++ k ++ " in " ++ show m
     Just (Option a) -> fromArg a
     Just Flag -> Left $ ArgumentException $ "expected an argument but got a flag: " ++ k
 
 getFlag :: String -> ArgMap -> Either AppException Bool
 getFlag k m =
   case Map.lookup k m of
-    Nothing -> Left $ ArgumentException $ "expected a flag: " ++ k
+    Nothing -> Right False
     Just Flag -> Right True
     Just _ -> Left $ ArgumentException $ "expected a flag but got an argument: " ++ k
 
@@ -118,10 +124,27 @@ checkForHelp args f =
 cfgAccount :: ArgMap -> IO AppCfg
 cfgAccount args =
   eitherToException id $ AccountCfg
-  <$> "--acount" `getOpt` args
+  <$> "--account" `getOpt` args
   <*> "--verbose" `getFlag` args
 
 cfgPassword :: ArgMap -> IO AppCfg
-cfgPassword args = do
-  when (Map.size args) > 1 $
-    throwM "Error, password only accepts 0 or 1 arguments"
+cfgPassword args =
+    let passwordMethods = catMaybes $ map (\k -> (k,) <$> Map.lookup k args ) ["--hash","--unsafe-password"]
+    in case passwordMethods of
+         [] -> (PasswordCfg . hashPassword) <$> promptForPassword
+         [("--hash",Option sha)] -> return $ PasswordCfg sha
+         [("--unsafe-password", Option pw)] -> return $ PasswordCfg (hashPassword pw)
+         _ -> throwM $ ArgumentException "expected 0 or 1 of --hash, --unsafe-password"
+  where
+    promptForPassword :: IO String
+    promptForPassword = do
+      doEcho <- hGetEcho stdin
+      hSetEcho stdin False
+      putStrLn "Password:"
+      pw <- hGetLine stdin
+      hSetEcho stdin doEcho
+      putStrLn ""
+      return pw
+    hashPassword :: String -> String
+    hashPassword =
+      concatMap (flip showHex "") . BS.unpack . hash . BC.pack
