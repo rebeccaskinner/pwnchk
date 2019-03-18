@@ -6,13 +6,12 @@ import Data.Aeson
 import Data.Aeson.Types
 import Data.Time.Clock
 import Data.Time.ISO8601
+import Data.Time.Format
 import Control.Monad.Catch
 import Text.Read
 import Data.Text.Encoding
 import qualified Data.ByteString.Lazy as BL
 import qualified Data.Text as T
-
-type TruncatedAccountResponse = [TruncatedAccountBreach]
 
 data TruncatedAccountBreach = TruncatedAccountBreach
   { _truncatedAccountResponseName :: T.Text } deriving (Eq, Show)
@@ -22,8 +21,6 @@ instance FromJSON TruncatedAccountBreach where
   parseJSON invalid = typeMismatch "TruncatedAccountBreach" invalid
 
 type DataClass = T.Text
-
-type AccountBreachResponse = [AccountBreachInfo]
 
 data AccountBreachInfo = AccountBreachInfo
   { _acctResponseName         :: T.Text
@@ -60,9 +57,15 @@ instance FromJSON AccountBreachInfo where
     <*> v .: "IsSpamList"
 
 getTime :: T.Text -> Parser UTCTime
-getTime s = do
-  case parseISO8601 (T.unpack s) of
-    Nothing -> fail "invalid time format"
+getTime s =
+  let s' = T.unpack s
+  in do
+  -- NB: parseISO8601 does not support YYYY-MM-DD format dates, so we
+  -- need to catch failure cases and explicitly try to reparse them
+  -- before failing.
+  case parseISO8601 s' of
+    Nothing ->
+      parseTimeM True defaultTimeLocale "%F" s'
     Just t -> return t
 
 data PasswordBreach = PasswordBreach

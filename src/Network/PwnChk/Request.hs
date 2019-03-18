@@ -51,12 +51,12 @@ get target parseBody = do
 getJSON :: (MonadIO m, MonadThrow m, Aeson.FromJSON a) => String -> m a
 getJSON = flip get decode
 
-truncatedBreaches :: (MonadIO m, MonadThrow m) => String -> m TruncatedAccountResponse
+truncatedBreaches :: (MonadIO m, MonadThrow m) => String -> m [TruncatedAccountBreach]
 truncatedBreaches account =
   let addr = printf "https://haveibeenpwned.com/api/v2/breachedaccount/%s?truncateResponse=true" account
   in getJSON addr
 
-allBreaches :: (MonadIO m, MonadThrow m) => String -> m AccountBreachResponse
+allBreaches :: (MonadIO m, MonadThrow m) => String -> m [AccountBreachInfo]
 allBreaches account =
   let addr = printf "https://haveibeenpwned.com/api/v2/breachedaccount/%s" account
   in getJSON addr
