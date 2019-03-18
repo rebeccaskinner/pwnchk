@@ -1,3 +1,5 @@
+-- | This module provides the types used by Network.PwnChk.Request to
+-- | make API requests
 module Network.PwnChk.Types where
 
 import Network.PwnChk.Exception
@@ -13,6 +15,8 @@ import Data.Text.Encoding
 import qualified Data.ByteString.Lazy as BL
 import qualified Data.Text as T
 
+-- | TruncatedAccountBreach is the response type for a truncated
+-- | account response
 data TruncatedAccountBreach = TruncatedAccountBreach
   { _truncatedAccountResponseName :: T.Text } deriving (Eq, Show)
 
@@ -20,8 +24,11 @@ instance FromJSON TruncatedAccountBreach where
   parseJSON (Object v) = TruncatedAccountBreach <$> v .: "Name"
   parseJSON invalid = typeMismatch "TruncatedAccountBreach" invalid
 
+
 type DataClass = T.Text
 
+-- | AccountBreachInfo is the response type for a full account breach
+-- | query response
 data AccountBreachInfo = AccountBreachInfo
   { _acctResponseName         :: T.Text
   , _acctResponseTitle        :: T.Text
@@ -56,6 +63,9 @@ instance FromJSON AccountBreachInfo where
     <*> v .: "IsRetired"
     <*> v .: "IsSpamList"
 
+-- | getTime is a utility function that attempts to parse a timestamp
+-- | first as an ISO 8601 format string, and, if that fails, as a
+-- | YYYY-MM-DD string
 getTime :: T.Text -> Parser UTCTime
 getTime s =
   let s' = T.unpack s
@@ -68,6 +78,8 @@ getTime s =
       parseTimeM True defaultTimeLocale "%F" s'
     Just t -> return t
 
+-- | PasswordBreach represents the response value of a password breach
+-- | query
 data PasswordBreach = PasswordBreach
   { passwordHash  :: T.Text
   , passwordCount :: Integer
@@ -80,8 +92,10 @@ parsePasswordBreach' t =
       let cnt' = readEither . T.unpack $ cnt
       in PasswordBreach hash <$> eitherToException InvalidResponseException cnt'
 
+-- | parsePasswordBreaches parses a text password into a a set of breach responses
 parsePasswordBreaches' :: (MonadThrow m) => T.Text -> m [PasswordBreach]
 parsePasswordBreaches' = mapM parsePasswordBreach' . T.lines
 
+-- | Like parsePasswordBreaches' but with a bytestring instead of a text
 parsePasswordBreaches :: MonadThrow m => BL.ByteString -> m [PasswordBreach]
 parsePasswordBreaches = parsePasswordBreaches' . decodeUtf8 . BL.toStrict
