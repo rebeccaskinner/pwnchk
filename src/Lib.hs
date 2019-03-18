@@ -1,9 +1,7 @@
 module Lib
-    ( someFunc
+    ( pwnChk
     ) where
 import App
-import Control.Monad.IO.Class
-import Control.Monad.Reader
 import Network.PwnChk.Request
 import Network.PwnChk.Types
 import Text.Printf
@@ -11,8 +9,8 @@ import Data.Time.Clock
 import Data.List
 import qualified Data.Text as T
 
-someFunc :: IO ()
-someFunc = cfgAndRun $ do
+pwnChk :: IO ()
+pwnChk = cfgAndRun $ do
   mode <- ask
   case mode of
     AccountCfg acct True -> do
@@ -27,7 +25,8 @@ someFunc = cfgAndRun $ do
     HelpCfg -> liftIO $ putStrLn helpText
 
 prettyprintShortBreach :: TruncatedAccountBreach -> IO ()
-prettyprintShortBreach (TruncatedAccountBreach name) = putStrLn . T.unpack $ name
+prettyprintShortBreach (TruncatedAccountBreach name) =
+  putStrLn . T.unpack $ name
 
 prettyprintLongBreach :: AccountBreachInfo -> IO ()
 prettyprintLongBreach a =
